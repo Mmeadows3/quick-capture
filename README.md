@@ -1,124 +1,125 @@
-# Voice Input Project
+# Quick Capture
 
-Voice-to-text dictation that integrates Windows 11's built-in speech recognition (Win+H) with automatic text capture to your daily notes.
+Voice-to-text note capture using Windows' built-in dictation (Win+H). Completely free, no API keys needed.
 
-## Features
+## How to Use
 
-- Uses Windows 11's high-accuracy dictation (Win+H)
-- Minimal window with aggressive focus control (prevents text duplication)
-- Auto-detects when you stop speaking (5s stable detection)
-- Manual finish with Ctrl + Left Alt
-- Lock mechanism prevents multiple instances
-- Appends as bullet points to daily.org
-- Visual notifications for feedback
+1. **Double-click `start.bat`**
+2. **Press Ctrl+Left Alt** - capture window opens
+3. **Press Win+H** to start dictation (or just type)
+4. **Speak your note** - Windows types it
+5. **Press Enter** to save to `daily.org` (or Esc to cancel)
 
-## Requirements
+That's it!
 
-- Windows 11 (for Win+H dictation)
-- Python 3.7+
-- AutoHotkey v2.0
-- Python packages: tkinter, keyboard, winotify
+## What It Does
 
-## Installation
-
-1. Install Python dependencies:
-```bash
-pip install keyboard winotify
+```
+Ctrl+Left Alt → Window opens → Win+H → Speak → Enter → 
+Saves as "* [2026-07-17 13:45] Your note text"
 ```
 
-2. Enable Windows speech recognition:
-   - Open Settings (Win+I)
-   - Go to Privacy & Security > Speech
-   - Turn on "Online speech recognition"
+## How It Works (Modular Design)
 
-3. Enable microphone access:
-   - Settings > Privacy & Security > Microphone
-   - Ensure "Microphone access" and "Let apps access your microphone" are ON
+Built from small, testable modules that each do one thing:
 
-## Usage
+### 1. `save_note.py` - Core saving functionality
+- Takes text and saves to daily.org
+- Adds timestamp in org-mode format
+- **Test it:** `python save_note.py`
 
-### Quick Start (Recommended)
+### 2. `capture_window.py` - GUI window
+- Shows a text box for typing/dictation
+- Returns entered text or empty if cancelled
+- **Test it:** `python capture_window.py`
 
-```bash
-python start.py
+### 3. `quick_capture.py` - Combines window + save
+- Uses capture_window.py to get text
+- Uses save_note.py to save it
+- **Test it:** `python quick_capture.py`
+
+### 4. `hotkey_listener.py` - Listens for Ctrl+Left Alt
+- Waits for hotkey press
+- Calls quick_capture.py when pressed
+- **Run it:** `python hotkey_listener.py`
+
+### 5. `start.bat` - Easy launcher
+- Checks Python is installed
+- Installs keyboard library if needed
+- Runs hotkey_listener.py
+
+## Files
+
+```
+quick-capture/
+├── start.bat              # Double-click to start
+├── hotkey_listener.py     # Listens for Ctrl+Left Alt
+├── quick_capture.py       # Combines window + save
+├── capture_window.py      # Shows text box window
+├── save_note.py          # Saves to daily.org
+└── requirements.txt      # Just 'keyboard' library
 ```
 
-This will:
-1. Run tests to verify everything works
-2. Start the AutoHotkey listener
-3. Enable **Ctrl + Left Alt** hotkey for voice input
+## First Time Setup
 
-### Manual Steps
+Windows dictation should already work. If Win+H doesn't work:
 
-1. Run `voice_to_file.ahk` (or start via start.py)
-2. Press **Ctrl + Left Alt** to start dictation
-3. Speak into your microphone
-4. Press **Ctrl + Left Alt** again to finish (or wait 5s after stopping)
-5. Text is appended to `daily.org` as a bullet point
+1. **Settings** (Win+I)
+2. **Privacy & Security** → **Speech**
+3. Turn on **Online speech recognition**
+4. **Time & Language** → **Typing** → **Voice typing** = ON
 
-## Testing
+## Why This Design?
 
-Run the simplified test suite:
+**Incremental:** Each module is a small step
+- save_note.py = just file writing
+- capture_window.py = just the GUI
+- Each piece works independently
 
-```bash
-python tests/test_simplified.py
+**Cumulative:** Later pieces build on earlier ones
+- quick_capture.py uses capture_window.py + save_note.py
+- hotkey_listener.py uses quick_capture.py
+
+**Didactic:** Easy to understand and modify
+- Each file has comments explaining what and why
+- Can test each piece separately
+- Can change one piece without breaking others
+
+## Customization
+
+**Different hotkey?** Edit `HOTKEY` in `hotkey_listener.py`:
+```python
+HOTKEY = 'f9'  # or 'ctrl+shift+n', etc.
 ```
 
-Tests verify:
-1. Voice-to-text capture works
-2. File writing works (uses dummy file, no pollution)
+**Different save location?** Edit `DAILY_ORG_PATH` in `save_note.py`:
+```python
+DAILY_ORG_PATH = r'C:\path\to\your\notes.org'
+```
 
-## Configuration
+**Different timestamp format?** Edit the `strftime()` in `save_note.py`:
+```python
+timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+```
 
-Edit `voice_to_file.py` to change:
+## Cost
 
-- `OUTPUT_FILE` - Where to save captured text (default: `C:\Users\Micah\shared\daily.org`)
-- `check_count >= 10` - Auto-complete delay (10 checks × 500ms = 5 seconds)
-- `max_checks = 60` - Maximum timeout (60 checks × 500ms = 30 seconds)
-
-## How It Works
-
-1. **Hotkey pressed**: Ctrl + Left Alt triggers the Python script
-2. **Focus control**: Window aggressively claims focus using `focus_force()`, `lift()`, and `update()`
-3. **Speech trigger**: Sends Win+H to activate Windows dictation
-4. **Text monitoring**: Checks text box every 500ms for changes
-5. **Auto-complete**: After 5 seconds of no changes, automatically finishes
-6. **Manual finish**: Ctrl + Left Alt also stops dictation immediately
-7. **Save**: Appends text as bullet point to daily.org
+**$0** - Uses Windows' free cloud dictation (same as pressing Win+H manually)
 
 ## Troubleshooting
 
-**Text appearing in multiple locations**
-- The script now uses `focus_force()` and aggressive window activation
-- If still happening, increase the delay in `root.after(1000, trigger_dictation)` to 1500ms or 2000ms
+**"Python not found"**
+- Install from https://python.org/downloads/
+- Make sure to check "Add Python to PATH"
 
-**"To use voice typing, select a text box"**
-- Window focus issue - restart the script
-- Check if another instance is running (delete `.voice_lock` if stuck)
+**Hotkey doesn't work**
+- May need to run `start.bat` as administrator
+- Check if another app is using Ctrl+Left Alt
 
-**Getting cut off early**
-- Increase `check_count >= 10` to a higher value (e.g., 20 for 10 seconds)
-- Use Ctrl + Left Alt to manually finish when ready
-
-**Multiple instances / lag**
-- Delete `.voice_lock` file if stuck
-- Lock mechanism normally prevents this automatically
-
-**No speech detected**
-- Check microphone permissions
-- Test microphone with Win+H outside this app
-- Ensure "Online speech recognition" is enabled in Windows Settings
-
-## Project Structure
-
-```
-voice_input/
-├── voice_to_file.py          # Main voice capture script
-├── voice_to_file.ahk         # AutoHotkey hotkey listener (Ctrl + Left Alt)
-├── start.py                  # Launcher with tests
-└── tests/
-    └── test_simplified.py    # Streamlined test suite (2 tests)
-```
+**Win+H doesn't open dictation**
+- Check Settings → Privacy → Speech is ON
+- Check Settings → Typing → Voice typing is ON
+- Try pressing Win+H outside the app first to test
 
 ## License
 
