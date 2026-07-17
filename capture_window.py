@@ -1,9 +1,11 @@
 """
-capture_window.py - GUI window for capturing text
+capture_window.py - GUI window for capturing text (PowerShell version)
 
 This module does ONE thing: shows a window with a text box and returns the text.
+Uses PowerShell + Windows Forms for fast, native Windows GUI.
 """
-import tkinter as tk
+import subprocess
+from pathlib import Path
 
 def show_capture_window():
     """
@@ -13,84 +15,46 @@ def show_capture_window():
         str: The text entered (empty string if cancelled)
 
     How it works:
-        1. Opens a window with a text box
-        2. Text box is focused and ready for typing
+        1. Calls PowerShell script (capture_window.ps1)
+        2. PowerShell shows native Windows form
         3. User types or dictates (Win+H)
         4. Press Enter to accept, Esc to cancel
-        5. Returns the text
+        5. PowerShell outputs the text, Python reads it
+
+    Why PowerShell?
+        - Faster startup than tkinter
+        - Native Windows GUI (Windows Forms)
+        - Better auto-focus on Windows
     """
-    # This will store the result
-    result = {"text": ""}
+    # Get the directory where this script is located
+    # __file__ = path to this Python file
+    # .parent = get the directory containing this file
+    script_dir = Path(__file__).parent
 
-    # Create the window
-    root = tk.Tk()
-    root.title("Quick Capture")
-    root.geometry("600x300")
-    root.configure(bg='#1e1e1e')  # Dark background
+    # Path to the PowerShell script
+    # script_dir / "filename" = join path with filename
+    ps_script = script_dir / "capture_window.ps1"
 
-    # Stay on top of other windows
-    root.attributes('-topmost', True)
-
-    # Center on screen
-    root.update_idletasks()
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    window_width = root.winfo_width()
-    window_height = root.winfo_height()
-    x = (screen_width // 2) - (window_width // 2)
-    y = (screen_height // 2) - (window_height // 2)
-    root.geometry(f'{window_width}x{window_height}+{x}+{y}')
-
-    # Instructions label
-    label = tk.Label(
-        root,
-        text="Type or press Win+H to dictate\nEnter = Save | Esc = Cancel",
-        font=('Segoe UI', 10),
-        bg='#1e1e1e',
-        fg='#ffffff'
+    # Run PowerShell script
+    # subprocess.run() = run external program and wait for it to finish
+    # 'powershell' = run PowerShell
+    # '-ExecutionPolicy', 'Bypass' = allow script to run without security prompt
+    # '-File', ps_script = run this script file
+    # capture_output=True = capture what the script prints
+    # text=True = return output as text (not bytes)
+    # encoding='utf-8' = handle special characters correctly
+    result = subprocess.run(
+        ['powershell', '-ExecutionPolicy', 'Bypass', '-File', str(ps_script)],
+        capture_output=True,
+        text=True,
+        encoding='utf-8'
     )
-    label.pack(pady=10)
 
-    # Text entry box
-    text_box = tk.Text(
-        root,
-        font=('Segoe UI', 12),
-        wrap=tk.WORD,  # Wrap at word boundaries
-        bg='#2d2d2d',  # Slightly lighter dark
-        fg='#ffffff',  # White text
-        insertbackground='#ffffff',  # White cursor
-        relief=tk.FLAT,
-        padx=10,
-        pady=10
-    )
-    text_box.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
-
-    # Focus the text box so it's ready for typing
-    text_box.focus_set()
-
-    def on_save():
-        """Called when user presses Enter"""
-        result["text"] = text_box.get('1.0', 'end-1c').strip()  # Get all text, strip whitespace
-        root.destroy()
-
-    def on_cancel():
-        """Called when user presses Esc"""
-        result["text"] = ""
-        root.destroy()
-
-    # Bind keyboard shortcuts
-    root.bind('<Return>', lambda e: on_save())  # Enter key
-    root.bind('<Escape>', lambda e: on_cancel())  # Escape key
-
-    # Make window modal-like (grabs focus)
-    root.focus_force()
-    root.lift()
-
-    # Show window and wait for it to close
-    root.mainloop()
-
-    # Return the text that was entered
-    return result["text"]
+    # Get the text from PowerShell output
+    # result.stdout = what PowerShell printed to console
+    # .strip() = remove leading/trailing whitespace
+    # Goal: Return exactly what user typed, or empty string if cancelled
+    return result.stdout.strip()
 
 # Test if run directly
 if __name__ == '__main__':

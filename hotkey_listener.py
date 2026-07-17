@@ -34,14 +34,20 @@ def start_listening():
     print("Listening...")
 
     # Register the hotkey
-    # When F9 is pressed, capture_and_save() will be called
+    # 'ctrl+alt' string tells keyboard library which keys to watch for
+    # When both keys pressed together → capture_and_save() is called
+    # Goal: Trigger capture anywhere, anytime with one key combo
     keyboard.add_hotkey(HOTKEY, capture_and_save)
 
     # Keep the program running
-    # This blocks until Ctrl+C is pressed
+    # keyboard.wait() blocks (doesn't return) until interrupted
+    # try/except catches Ctrl+C interrupt for clean shutdown
+    # Goal: Run forever, listening for hotkey, until user exits
     try:
-        keyboard.wait()  # Wait forever (until interrupted)
+        keyboard.wait()  # Wait forever (until Ctrl+C)
     except KeyboardInterrupt:
+        # KeyboardInterrupt = exception raised when user presses Ctrl+C
+        # '\n\n' = two newlines for visual spacing
         print("\n\n[EXIT] Shutting down...")
 
 # Run if executed directly

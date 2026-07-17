@@ -22,9 +22,17 @@ if errorlevel 1 (
 echo [OK] Dependencies ready
 
 echo.
-echo ================================
-echo Quick Capture
-echo ================================
+
+REM Run automated tests
+python test_all.py
+if errorlevel 1 (
+    echo.
+    echo Tests failed. Please fix errors before continuing.
+    pause
+    exit /b 1
+)
+
+echo Starting hotkey listener...
 echo.
 
 REM Run the hotkey listener

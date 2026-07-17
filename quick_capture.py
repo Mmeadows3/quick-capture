@@ -33,6 +33,8 @@ def capture_and_save():
     success = save_note(text)
 
     if success:
+        # f"..." = formatted string (inserts {text} variable into the string)
+        # Goal: Show what was saved so user knows it worked
         print(f"[OK] Saved: {text}")
         return True
     else:
@@ -41,6 +43,8 @@ def capture_and_save():
 
 # Test if run directly
 if __name__ == '__main__':
+    # '=' * 60 creates a line of 60 equal signs (visual separator)
+    # Goal: Makes output easy to read with clear sections
     print("=" * 60)
     print("Quick Capture Test")
     print("=" * 60)
