@@ -30,9 +30,10 @@ def test_hotkey_listener(quiet=False):
             print("  [OK] Import hotkey_listener module")
 
         # Check hotkey configuration
-        from config import default_config
+        from config import Config
+        config = Config()
         if not quiet:
-            print(f"  [OK] Hotkey configured: {default_config.hotkey}")
+            print(f"  [OK] Hotkey configured: {config.hotkey}")
             print("[hotkey_listener] All tests passed!\n")
         return True
 

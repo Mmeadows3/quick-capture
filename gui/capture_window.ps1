@@ -1,8 +1,7 @@
-# capture_window.ps1 - Windows Forms capture window
-# This is a PowerShell script that shows a native Windows form for text capture
-# Goal: Fast, native Windows GUI that auto-focuses
+# Native Windows Forms text capture dialog
+# Dark theme, auto-focus, keyboard shortcuts (Enter=save, Shift+Enter=newline, Esc=cancel)
 
-# Redirect all PowerShell's internal output to null to prevent any leakage
+# Suppress all PowerShell internal output (prevents banner text from leaking into captured text)
 $ErrorActionPreference = 'SilentlyContinue'
 $WarningPreference = 'SilentlyContinue'
 $VerbosePreference = 'SilentlyContinue'
@@ -11,17 +10,15 @@ $DebugPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Create the form (window)
-# System.Windows.Forms.Form = native Windows window class
+# Main window (600x300, centered, dark theme, stays on top)
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Quick Capture"
 $form.Size = New-Object System.Drawing.Size(600, 300)
-$form.StartPosition = 'CenterScreen'  # Center on screen automatically
-$form.TopMost = $true  # Stay on top of other windows
-$form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)  # Dark background
+$form.StartPosition = 'CenterScreen'
+$form.TopMost = $true
+$form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
 
-# Label with instructions
-# System.Drawing.Color::FromArgb(R, G, B) = RGB color (white text)
+# Instructions label (white on dark)
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10, 10)
 $label.Size = New-Object System.Drawing.Size(560, 40)
@@ -30,65 +27,50 @@ $label.ForeColor = [System.Drawing.Color]::White
 $label.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
 $form.Controls.Add($label)
 
-# Text box for typing/dictation
-# Multiline = allows multiple lines of text
-# ScrollBars = shows scrollbar if text is long
+# Text input box (multiline, scrollable, dark theme)
 $textBox = New-Object System.Windows.Forms.TextBox
 $textBox.Multiline = $true
 $textBox.ScrollBars = 'Vertical'
 $textBox.Location = New-Object System.Drawing.Point(10, 60)
 $textBox.Size = New-Object System.Drawing.Size(560, 180)
 $textBox.Font = New-Object System.Drawing.Font("Segoe UI", 12)
-$textBox.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)  # Slightly lighter dark
+$textBox.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)
 $textBox.ForeColor = [System.Drawing.Color]::White
-$textBox.Text = ""  # Explicitly set to empty string
+$textBox.Text = ""
 $form.Controls.Add($textBox)
 
-# Handle Enter key in the text box
-# In multiline text boxes, Enter adds new line by default
-# We want: Enter = save, Shift+Enter = new line
+# Keyboard shortcuts: Enter=save (unless Shift held), Esc=cancel
 $textBox.Add_KeyDown({
     param($sender, $e)
-    # Check if Enter key pressed (KeyCode 13 = Enter)
     if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
-        # If Shift NOT held down, save and close
         if (-not $e.Shift) {
             $e.SuppressKeyPress = $true  # Don't add newline
             $form.DialogResult = [System.Windows.Forms.DialogResult]::OK
             $form.Close()
         }
-        # If Shift IS held down, allow the newline (do nothing)
+        # Shift+Enter: allow default newline
     }
-    # Escape key also handled here
     if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
         $form.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
         $form.Close()
     }
 })
 
-# Variable to store result
-$result = ""
-
-# When form is shown, focus the text box
-# Add_Shown event fires when window appears
+# Auto-focus text box when window opens
 $form.Add_Shown({
-    $textBox.Select()  # Focus the text box
-    $form.Activate()   # Bring window to front
+    $textBox.Select()
+    $form.Activate()
 })
 
-# Show the form and wait for user action
-# ShowDialog() = modal window (blocks until closed)
-# Returns OK if Enter pressed, Cancel if Esc pressed
+# Show dialog, wait for user
 $dialogResult = $form.ShowDialog()
 
-# Output the result to stdout (Python will read this)
-# If user pressed Enter and there's text, output it
-# If user pressed Esc or no text, output nothing
+# Filter out PowerShell banner lines that sometimes leak into dictation
+# Only output if user pressed Enter (OK) and there's text
 if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK -and $textBox.Text.Trim() -ne "") {
     $capturedText = $textBox.Text.Trim()
 
-    # Final safety check: filter out PowerShell noise lines
-    # Split into lines, remove noise, rejoin
+    # Noise patterns that should never be legitimate user input
     $noisePatterns = @(
         'Windows PowerShell',
         'Copyright',
@@ -98,6 +80,7 @@ if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK -and $textBox.Text
         'https://aka.ms/pscore6'
     )
 
+    # Remove lines containing noise patterns
     $cleanLines = $capturedText -split "`n" | Where-Object {
         $line = $_
         $isNoise = $false
@@ -112,18 +95,8 @@ if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK -and $textBox.Text
 
     $cleanText = ($cleanLines -join "`n").Trim()
 
-    # Debug: Write to stderr what we're about to output
-    [Console]::Error.WriteLine("[PS DEBUG] Original: '$capturedText'")
-    [Console]::Error.WriteLine("[PS DEBUG] Cleaned: '$cleanText'")
-    [Console]::Error.WriteLine("[PS DEBUG] Length: $($cleanText.Length)")
-
-    # Only output if there's text left after filtering
+    # Output clean text to stdout (Python captures this)
     if ($cleanText -ne "") {
         Write-Output $cleanText
-    } else {
-        [Console]::Error.WriteLine("[PS DEBUG] All lines were noise - outputting nothing")
     }
-} else {
-    # Debug cancelled/empty
-    [Console]::Error.WriteLine("[PS DEBUG] Cancelled or empty. DialogResult: $dialogResult, TextLength: $($textBox.Text.Length)")
 }

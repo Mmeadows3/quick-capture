@@ -1,9 +1,11 @@
 @echo off
+REM Quick Capture launcher - handles dependencies, health checks, and startup
+
 echo.
 echo Quick Capture - Starting...
 echo.
 
-REM Check Python
+REM Verify Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
     echo Error: Python not found
@@ -11,17 +13,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Install keyboard library if needed
+REM Auto-install keyboard library if missing
 pip show keyboard >nul 2>&1
 if errorlevel 1 (
     echo Installing dependencies...
-    pip install -q keyboard >nul 2>&1
+    pip install -q keyboard
 )
 
-REM Add src to Python path so imports work
+REM Add src to Python import path
 set PYTHONPATH=%CD%\src;%PYTHONPATH%
 
-REM Run health checks
+REM Run health checks (catch issues before user triggers hotkey)
 echo Running health checks...
 python tests\test_runner.py --quiet
 if errorlevel 1 (
@@ -31,6 +33,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Show usage instructions
 echo.
 echo ============================================================
 echo Quick Capture Ready
@@ -40,5 +43,5 @@ echo Press Ctrl+C to exit
 echo ============================================================
 echo.
 
-REM Start listener (silently)
+REM Start the listener (runs until Ctrl+C)
 python src\main.py

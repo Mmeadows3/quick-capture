@@ -160,11 +160,11 @@ def test_save_note(quiet=False):
         # In quiet mode, just verify imports and basic functionality
         try:
             from modules.save_note import save_note
-            from config import default_config
+            from config import Config
             print("  [OK] Import save_note module")
 
             # Quick smoke test
-            success, message = save_note("Test note", default_config)
+            success, message = save_note("Test note", Config())
             if success:
                 print("  [OK] save_note basic functionality")
                 return True
