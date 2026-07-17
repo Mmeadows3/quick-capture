@@ -19,7 +19,7 @@ $form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)  # Dark backgroun
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10, 10)
 $label.Size = New-Object System.Drawing.Size(560, 40)
-$label.Text = "Type or press Win+H to dictate`nPress Enter to save, Esc to cancel"
+$label.Text = "Type or press Win+H to dictate`nEnter = Save | Shift+Enter = New line | Esc = Cancel"
 $label.ForeColor = [System.Drawing.Color]::White
 $label.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
 $form.Controls.Add($label)
@@ -37,18 +37,30 @@ $textBox.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)  # Slightly li
 $textBox.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($textBox)
 
+# Handle Enter key in the text box
+# In multiline text boxes, Enter adds new line by default
+# We want: Enter = save, Shift+Enter = new line
+$textBox.Add_KeyDown({
+    param($sender, $e)
+    # Check if Enter key pressed (KeyCode 13 = Enter)
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        # If Shift NOT held down, save and close
+        if (-not $e.Shift) {
+            $e.SuppressKeyPress = $true  # Don't add newline
+            $form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            $form.Close()
+        }
+        # If Shift IS held down, allow the newline (do nothing)
+    }
+    # Escape key also handled here
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
+        $form.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        $form.Close()
+    }
+})
+
 # Variable to store result
 $result = ""
-
-# Save button (hidden, triggered by Enter key)
-$saveButton = New-Object System.Windows.Forms.Button
-$saveButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-$form.AcceptButton = $saveButton  # Enter key triggers this
-
-# Cancel button (hidden, triggered by Esc key)
-$cancelButton = New-Object System.Windows.Forms.Button
-$cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-$form.CancelButton = $cancelButton  # Esc key triggers this
 
 # When form is shown, focus the text box
 # Add_Shown event fires when window appears
