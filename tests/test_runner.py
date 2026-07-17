@@ -29,12 +29,15 @@ def run_all_tests():
     from test_save_note import test_save_note
     from test_capture_window import test_capture_window
     from test_hotkey_listener import test_hotkey_listener
+    from test_double_trigger_prevention import test_prevents_double_launch, test_allows_sequential_captures
 
     # Run tests in order (cumulative dependencies)
     tests = [
         ("save_note", test_save_note),
         ("capture_window", test_capture_window),
-        ("hotkey_listener", test_hotkey_listener)
+        ("hotkey_listener", test_hotkey_listener),
+        ("double_trigger_prevention_1", test_prevents_double_launch),
+        ("double_trigger_prevention_2", test_allows_sequential_captures)
     ]
 
     failed = []

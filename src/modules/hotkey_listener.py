@@ -36,10 +36,11 @@ def start_listening(hotkey, on_trigger, config, quiet=False):
     cooldown_seconds = 1.0  # Ignore triggers in first second
     last_trigger_time = 0
     min_interval = 0.5  # Minimum 500ms between captures
+    capture_in_progress = False  # Prevents multiple windows opening
 
     def debounced_trigger():
         """Wrapper that filters phantom and double triggers."""
-        nonlocal last_trigger_time
+        nonlocal last_trigger_time, capture_in_progress
 
         current_time = time.time()
         elapsed_since_start = current_time - activation_time
@@ -49,13 +50,22 @@ def start_listening(hotkey, on_trigger, config, quiet=False):
         if elapsed_since_start < cooldown_seconds:
             return
 
+        # Skip if capture already in progress (window is open)
+        if capture_in_progress:
+            print("Ignoring trigger: capture window already open")
+            return
+
         # Skip rapid double-triggers (user holding keys)
         if last_trigger_time > 0 and elapsed_since_last < min_interval:
             print(f"Ignoring double-trigger ({elapsed_since_last:.2f}s since last)")
             return
 
         last_trigger_time = current_time
-        on_trigger()
+        capture_in_progress = True
+        try:
+            on_trigger()
+        finally:
+            capture_in_progress = False
 
     # Register system-wide hotkey
     keyboard.add_hotkey(hotkey, debounced_trigger)
