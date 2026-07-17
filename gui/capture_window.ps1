@@ -2,6 +2,12 @@
 # This is a PowerShell script that shows a native Windows form for text capture
 # Goal: Fast, native Windows GUI that auto-focuses
 
+# Redirect all PowerShell's internal output to null to prevent any leakage
+$ErrorActionPreference = 'SilentlyContinue'
+$WarningPreference = 'SilentlyContinue'
+$VerbosePreference = 'SilentlyContinue'
+$DebugPreference = 'SilentlyContinue'
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -35,6 +41,7 @@ $textBox.Size = New-Object System.Drawing.Size(560, 180)
 $textBox.Font = New-Object System.Drawing.Font("Segoe UI", 12)
 $textBox.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)  # Slightly lighter dark
 $textBox.ForeColor = [System.Drawing.Color]::White
+$textBox.Text = ""  # Explicitly set to empty string
 $form.Controls.Add($textBox)
 
 # Handle Enter key in the text box
@@ -78,7 +85,45 @@ $dialogResult = $form.ShowDialog()
 # If user pressed Enter and there's text, output it
 # If user pressed Esc or no text, output nothing
 if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK -and $textBox.Text.Trim() -ne "") {
-    # Write to stdout (Python reads this)
-    Write-Output $textBox.Text.Trim()
+    $capturedText = $textBox.Text.Trim()
+
+    # Final safety check: filter out PowerShell noise lines
+    # Split into lines, remove noise, rejoin
+    $noisePatterns = @(
+        'Windows PowerShell',
+        'Copyright',
+        'Microsoft Corporation',
+        'All rights reserved',
+        'Try the new cross-platform PowerShell',
+        'https://aka.ms/pscore6'
+    )
+
+    $cleanLines = $capturedText -split "`n" | Where-Object {
+        $line = $_
+        $isNoise = $false
+        foreach ($pattern in $noisePatterns) {
+            if ($line -like "*$pattern*") {
+                $isNoise = $true
+                break
+            }
+        }
+        -not $isNoise
+    }
+
+    $cleanText = ($cleanLines -join "`n").Trim()
+
+    # Debug: Write to stderr what we're about to output
+    [Console]::Error.WriteLine("[PS DEBUG] Original: '$capturedText'")
+    [Console]::Error.WriteLine("[PS DEBUG] Cleaned: '$cleanText'")
+    [Console]::Error.WriteLine("[PS DEBUG] Length: $($cleanText.Length)")
+
+    # Only output if there's text left after filtering
+    if ($cleanText -ne "") {
+        Write-Output $cleanText
+    } else {
+        [Console]::Error.WriteLine("[PS DEBUG] All lines were noise - outputting nothing")
+    }
+} else {
+    # Debug cancelled/empty
+    [Console]::Error.WriteLine("[PS DEBUG] Cancelled or empty. DialogResult: $dialogResult, TextLength: $($textBox.Text.Length)")
 }
-# If cancelled or empty, output nothing (empty string)

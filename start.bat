@@ -6,34 +6,39 @@ echo.
 REM Check Python
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [FAIL] Python not found
+    echo Error: Python not found
     pause
     exit /b 1
 )
-echo [OK] Python installed
 
 REM Install keyboard library if needed
-echo [OK] Checking dependencies...
 pip show keyboard >nul 2>&1
 if errorlevel 1 (
-    echo      Installing keyboard library...
-    pip install -q keyboard
+    echo Installing dependencies...
+    pip install -q keyboard >nul 2>&1
 )
-echo [OK] Dependencies ready
 
-echo.
+REM Add src to Python path so imports work
+set PYTHONPATH=%CD%\src;%PYTHONPATH%
 
-REM Run automated tests
-python test_all.py
+REM Run health checks
+echo Running health checks...
+python tests\test_runner.py --quiet
 if errorlevel 1 (
     echo.
-    echo Tests failed. Please fix errors before continuing.
+    echo Health checks failed. Fix errors above.
     pause
     exit /b 1
 )
 
-echo Starting hotkey listener...
+echo.
+echo ============================================================
+echo Quick Capture Ready
+echo ============================================================
+echo Press Ctrl+Left Alt to capture notes
+echo Press Ctrl+C to exit
+echo ============================================================
 echo.
 
-REM Run the hotkey listener
-python hotkey_listener.py
+REM Start listener (silently)
+python src\main.py

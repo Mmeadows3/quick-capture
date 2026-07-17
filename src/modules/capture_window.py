@@ -26,35 +26,41 @@ def show_capture_window():
         - Native Windows GUI (Windows Forms)
         - Better auto-focus on Windows
     """
-    # Get the directory where this script is located
-    # __file__ = path to this Python file
-    # .parent = get the directory containing this file
-    script_dir = Path(__file__).parent
+    # Get the project root directory
+    # __file__ = path to this Python file (in src/modules/)
+    # .parent = modules/ directory
+    # .parent again = src/ directory
+    # .parent once more = project root
+    project_root = Path(__file__).parent.parent.parent
 
-    # Path to the PowerShell script
-    # script_dir / "filename" = join path with filename
-    ps_script = script_dir / "capture_window.ps1"
+    # Path to the PowerShell script in gui/
+    ps_script = project_root / "gui" / "capture_window.ps1"
+
+    print(f"[DEBUG] Launching PowerShell window: {ps_script}")
 
     # Run PowerShell script
-    # subprocess.run() = run external program and wait for it to finish
-    # 'powershell' = run PowerShell
-    # '-ExecutionPolicy', 'Bypass' = allow script to run without security prompt
-    # '-File', ps_script = run this script file
-    # capture_output=True = capture what the script prints
-    # text=True = return output as text (not bytes)
-    # encoding='utf-8' = handle special characters correctly
+    # -WindowStyle Hidden hides the PowerShell console (we only want the Forms GUI)
+    # -NoProfile prevents profile scripts from running and outputting text
+    # -NoLogo suppresses copyright banner
     result = subprocess.run(
-        ['powershell', '-ExecutionPolicy', 'Bypass', '-File', str(ps_script)],
+        ['powershell', '-WindowStyle', 'Hidden', '-NoProfile', '-NoLogo', '-ExecutionPolicy', 'Bypass', '-File', str(ps_script)],
         capture_output=True,
         text=True,
         encoding='utf-8'
     )
 
-    # Get the text from PowerShell output
-    # result.stdout = what PowerShell printed to console
-    # .strip() = remove leading/trailing whitespace
-    # Goal: Return exactly what user typed, or empty string if cancelled
-    return result.stdout.strip()
+    # Return exactly what the user typed (or empty if cancelled)
+    captured_text = result.stdout.strip()
+
+    # DEBUG: Show what we captured
+    print(f"[TEMP DEBUG] Captured: {repr(captured_text)}")
+    print(f"[TEMP DEBUG] Return code: {result.returncode}")
+    if result.stderr:
+        print(f"[TEMP DEBUG] PowerShell stderr:")
+        for line in result.stderr.strip().split('\n'):
+            print(f"  {line}")
+
+    return captured_text
 
 # Test if run directly
 if __name__ == '__main__':
